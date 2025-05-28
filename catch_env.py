@@ -15,8 +15,12 @@ class CatchEnv(gym.Env):
         self.ball_radius = 10
         self.speed = 5
 
+        self.ball_vx = 0
+        self.ball_vy = 0
+
         self.action_space = spaces.Discrete(3)  # 0 = left, 1 = stay, 2 = right
         self.observation_space = spaces.Box(low=0, high=1, shape=(5,), dtype=np.float32)
+        self.actions = []
 
         self.window = None
         self.clock = None
@@ -37,12 +41,13 @@ class CatchEnv(gym.Env):
     def reset(self):
         self.bucket_x = 200
         self.ball_x = np.random.randint(0, self.width)
-        self.ball_y = 0
+        self.ball_y = -100
+        self.speed = 0
+        self.angle = math.radians(random.randint(60, 120))
+        self.ball_vx = math.cos(self.angle)
+        self.ball_vy = math.sin(self.angle)
 
-        self.angle = random.randint(60, 120)
-        rad = math.radians(self.angle)
-        self.ball_vx = self.speed * math.cos(rad)
-        self.ball_vy = self.speed * math.sin(rad)
+        self.actions = []
 
         self.direction_locked = None
         return self._get_obs()
@@ -66,6 +71,7 @@ class CatchEnv(gym.Env):
         elif self.direction_locked == "right" and action == 2:
             self.bucket_x += 10
 
+        self.actions.append(action)
         # Clip bucket position
         self.bucket_x = np.clip(self.bucket_x, 0, self.width - self.bucket_width)
 
@@ -73,9 +79,10 @@ class CatchEnv(gym.Env):
         if (prev_bucket_x != self.bucket_x) and (self.bucket_x == 0 or self.bucket_x == self.width - self.bucket_width):
             reward -= 0.1
 
-        # Move the ball
-        self.ball_x += self.ball_vx
-        self.ball_y += self.ball_vy
+        self.ball_x += self.ball_vx*self.speed
+        self.ball_y += self.ball_vy*self.speed
+
+        self.speed += 0.1
 
         # Bounce off walls
         if self.ball_x <= 0 or self.ball_x >= self.width:
@@ -91,10 +98,19 @@ class CatchEnv(gym.Env):
 
             if distance < self.bucket_width / 2:
                 reward += 1
+                num_no_action = 0
+                for move in reversed(self.actions):
+                    if move == 1:
+                        num_no_action += 1
+                    else:
+                        break
+                reward += num_no_action/100
                 self.score += 1
             else:
                 reward -= 1
                 self.score -= 1
+            
+            
 
         return self._get_obs(), reward, done, {}
 

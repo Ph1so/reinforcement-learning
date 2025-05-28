@@ -29,14 +29,11 @@ class RenderEveryNCallback(BaseCallback):
 train_env = CatchEnv()
 render_env = CatchEnv()
 
-# Load existing model and attach new training env
 model = DQN.load("model/catch_model.zip", env=train_env)
 
-# Continue training and visualize every N steps
-model.learn(total_timesteps=1000000, callback=RenderEveryNCallback(render_env, render_freq=5000))
+model.learn(total_timesteps=10000000, callback=RenderEveryNCallback(render_env, render_freq=5000))
 
-# Save updated model
-model.save("model/catch_model.zip")
+model.save("model/catch_model")
 
 train_env.close()
 render_env.close()
